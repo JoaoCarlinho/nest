@@ -64,6 +64,7 @@ model Project {
   demProcessingJobs  DEMProcessingJob[]
   digitalElevationModel DigitalElevationModel?
   slopeAnalysis      SlopeAnalysis?
+  aspectAnalysis     AspectAnalysis?
   exclusionZones     ExclusionZone[]
   buildableArea      BuildableArea?
 
@@ -99,6 +100,7 @@ model PropertyBoundary {
   demProcessingJobs DEMProcessingJob[]
   digitalElevationModel DigitalElevationModel?
   slopeAnalysis   SlopeAnalysis[]
+  aspectAnalysis  AspectAnalysis[]
   exclusionZones  ExclusionZone[]
   buildableArea   BuildableArea?
 
@@ -235,6 +237,7 @@ model DigitalElevationModel {
   propertyBoundary PropertyBoundary   @relation(fields: [propertyBoundaryId], references: [id], onDelete: Cascade)
   processingJobs   DEMProcessingJob[]
   slopeAnalysis    SlopeAnalysis[]
+  aspectAnalysis   AspectAnalysis[]
 
   @@index([projectId])
 }
@@ -366,7 +369,58 @@ model SlopeAnalysis {
   project          Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
   propertyBoundary PropertyBoundary     @relation(fields: [propertyBoundaryId], references: [id], onDelete: Cascade)
   dem              DigitalElevationModel @relation(fields: [demId], references: [id])
+  aspectAnalysis   AspectAnalysis[]
 
   @@index([projectId])
   @@index([demId])
+}
+
+// Story 2.2: Aspect (Orientation) Analysis
+model AspectAnalysis {
+  id                 String @id @default(uuid())
+  projectId          String @unique
+  propertyBoundaryId String
+  demId              String // Reference to DEM from Story 1.4
+  slopeAnalysisId    String // Reference to slope analysis from Story 2.1
+
+  // Analysis parameters
+  flatAreaThreshold Float @default(2.0) // slope % below which aspect is undefined
+
+  // Statistics - Directional distribution
+  flatPercent       Float // % of site with slope < flatAreaThreshold
+  northPercent      Float // % of site facing N
+  northeastPercent  Float // % of site facing NE
+  eastPercent       Float // % of site facing E
+  southeastPercent  Float // % of site facing SE
+  southPercent      Float // % of site facing S
+  southwestPercent  Float // % of site facing SW
+  westPercent       Float // % of site facing W
+  northwestPercent  Float // % of site facing NW
+  dominantDirection String // "N", "NE", "E", etc. (direction with most cells)
+  circularMeanAspect Float? // degrees (0-360), null if too many flat areas
+
+  // Solar analysis
+  northFacingPercent Float // % of site facing north (315-45°)
+  southFacingPercent Float // % of site facing south (135-225°)
+
+  // Output files (S3 paths)
+  aspectGeoTiffPath        String  // Raw aspect values (0-360°)
+  classifiedGeoTiffPath    String  // Classified 8 directions
+  visualizationPngPath     String  // Color-coded aspect map
+  northFacingAreasGeojson  String? // Polygons of north-facing areas
+  southFacingAreasGeojson  String? // Polygons of south-facing areas
+
+  // Metadata
+  calculatedAt     DateTime @default(now())
+  processingTimeMs Int // Performance tracking
+
+  // Relations
+  project          Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  propertyBoundary PropertyBoundary     @relation(fields: [propertyBoundaryId], references: [id], onDelete: Cascade)
+  dem              DigitalElevationModel @relation(fields: [demId], references: [id])
+  slopeAnalysis    SlopeAnalysis        @relation(fields: [slopeAnalysisId], references: [id])
+
+  @@index([projectId])
+  @@index([demId])
+  @@index([slopeAnalysisId])
 }
