@@ -1,0 +1,14 @@
+# Python dependencies for DEM Generator Lambda
+
+# GDAL for geospatial raster operations
+GDAL==3.6.2
+
+# PostgreSQL adapter
+psycopg2-binary==2.9.9
+
+# AWS SDK
+boto3==1.34.34
+
+# Numerical computing
+numpy==1.24.4
+scipy==1.11.4
