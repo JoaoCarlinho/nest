@@ -1,0 +1,316 @@
+// Prisma schema for Nest geospatial site layout application
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User model (placeholder - to be expanded in future stories)
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  uploadedFiles UploadedFile[]
+  projects      Project[]
+
+  @@index([email])
+}
+
+// Story 1.1: File upload tracking
+model UploadedFile {
+  id           String    @id @default(uuid())
+  userId       String
+  originalName String
+  storedName   String    // S3 key path
+  size         Int       // bytes
+  contentType  String    // mime type
+  uploadedAt   DateTime  @default(now())
+  expiresAt    DateTime  // uploadedAt + 7 days
+  processedAt  DateTime? // null until processed by parser
+
+  // Relations
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  propertyBoundary  PropertyBoundary?
+  contourLines      ContourLine[]
+
+  @@index([userId, uploadedAt])
+  @@index([expiresAt]) // For cleanup jobs
+}
+
+// Story 1.2+: Project model (placeholder for future stories)
+model Project {
+  id          String   @id @default(uuid())
+  userId      String
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  user               User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  propertyBoundaries PropertyBoundary[]
+  contourLines       ContourLine[]
+  terrainMetadata    TerrainMetadata?
+  demProcessingJobs  DEMProcessingJob[]
+  digitalElevationModel DigitalElevationModel?
+
+  @@index([userId])
+}
+
+// Story 1.2: Property boundary parsed from KML
+model PropertyBoundary {
+  id      String @id @default(uuid())
+  projectId String
+  fileId    String @unique
+
+  // PostGIS geometry column (GeoJSON stored as GEOMETRY type)
+  // WGS84 (EPSG:4326) coordinate reference system
+  geometry Unsupported("geometry(Polygon, 4326)")
+
+  // Calculated properties
+  areaSquareMeters Float
+  areaAcres        Float
+  areaHectares     Float
+  perimeterMeters  Float
+  centroidLat      Float
+  centroidLng      Float
+
+  // Metadata
+  parsedAt DateTime @default(now())
+
+  // Relations
+  project         Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  uploadedFile    UploadedFile     @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  contourLines    ContourLine[]
+  terrainMetadata TerrainMetadata?
+  demProcessingJobs DEMProcessingJob[]
+  digitalElevationModel DigitalElevationModel?
+
+  @@index([projectId])
+  @@index([fileId])
+  // Spatial index created via raw SQL migration (PostGIS GIST index)
+}
+
+// Story 1.3: Contour lines from topographic data
+model ContourLine {
+  id                 String @id @default(uuid())
+  projectId          String
+  propertyBoundaryId String
+  fileId             String
+
+  // PostGIS LineString geometry
+  geometry Unsupported("geometry(LineString, 4326)") // WGS84
+
+  // Elevation data
+  elevation     Float  // meters (or converted from feet)
+  elevationUnit String @default("meters") // "meters" or "feet"
+
+  // Metadata
+  importedAt DateTime @default(now())
+
+  // Relations
+  project          Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  propertyBoundary PropertyBoundary @relation(fields: [propertyBoundaryId], references: [id], onDelete: Cascade)
+  uploadedFile     UploadedFile     @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([propertyBoundaryId])
+  @@index([fileId])
+  @@index([elevation])
+  // Spatial index created via raw SQL migration (PostGIS GIST index)
+}
+
+// Story 1.3: Terrain statistics from contour data
+model TerrainMetadata {
+  id                 String @id @default(uuid())
+  projectId          String @unique
+  propertyBoundaryId String @unique
+
+  // Elevation statistics
+  minElevation   Float // meters
+  maxElevation   Float // meters
+  avgElevation   Float // meters
+  elevationRange Float // max - min
+
+  // Metadata
+  contourCount    Int
+  contourInterval Float? // meters (detected or user-specified)
+  calculatedAt    DateTime @default(now())
+
+  // Relations
+  project          Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  propertyBoundary PropertyBoundary @relation(fields: [propertyBoundaryId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+}
+
+// Story 1.4: DEM processing job tracking
+model DEMProcessingJob {
+  id                 String  @id @default(uuid())
+  projectId          String
+  propertyBoundaryId String
+  contourFileId      String? // Optional: specific contour file
+
+  // Job configuration
+  resolution          Float  @default(1.0) // meters
+  interpolationMethod String @default("tin") // "tin", "idw", "kriging"
+
+  // Job status
+  status       String  // "queued", "processing", "completed", "failed"
+  progress     Int     @default(0) // 0-100%
+  errorMessage String?
+
+  // Timing
+  queuedAt       DateTime  @default(now())
+  startedAt      DateTime?
+  completedAt    DateTime?
+  processingTime Int? // seconds
+
+  // Results
+  demId String? // FK to DigitalElevationModel
+
+  // Relations
+  project          Project                 @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  propertyBoundary PropertyBoundary        @relation(fields: [propertyBoundaryId], references: [id], onDelete: Cascade)
+  dem              DigitalElevationModel?  @relation(fields: [demId], references: [id])
+
+  @@index([projectId])
+  @@index([status])
+  @@index([queuedAt])
+}
+
+// Story 1.4: Digital Elevation Model (DEM) metadata
+model DigitalElevationModel {
+  id                 String @id @default(uuid())
+  projectId          String @unique
+  propertyBoundaryId String @unique
+
+  // Storage
+  s3Path   String // GeoTIFF file path in S3
+  fileSize Int    // bytes
+
+  // Grid properties
+  resolution          Float  // meters per pixel
+  width               Int    // pixels
+  height              Int    // pixels
+  interpolationMethod String // "tin", "idw", "kriging"
+
+  // Geographic bounds (WGS84)
+  minLat Float
+  maxLat Float
+  minLng Float
+  maxLng Float
+
+  // Elevation statistics
+  minElevation Float // meters
+  maxElevation Float // meters
+  avgElevation Float // meters
+
+  // Validation metrics
+  rmse                   Float // Root Mean Square Error vs contours
+  maxDeviation           Float // meters
+  contourMatchPercentage Float // % of contours within tolerance
+
+  // Metadata
+  generatedAt DateTime @default(now())
+
+  // Relations
+  project          Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  propertyBoundary PropertyBoundary   @relation(fields: [propertyBoundaryId], references: [id], onDelete: Cascade)
+  processingJobs   DEMProcessingJob[]
+
+  @@index([projectId])
+}
+
+// Story 1.5: Exclusion zone types
+enum ExclusionZoneType {
+  WETLAND
+  PROTECTED_AREA
+  EASEMENT
+  BUFFER
+  SETBACK
+  CUSTOM
+}
+
+// Story 1.5: Exclusion zones (wetlands, protected areas, easements)
+model ExclusionZone {
+  id                 String            @id @default(uuid())
+  projectId          String
+  propertyBoundaryId String
+  fileId             String? // Optional: if uploaded from KML
+  createdBy          String // User ID
+
+  // Zone identification
+  name        String
+  type        ExclusionZoneType
+  description String?
+
+  // Geometry (original zone)
+  geometry Unsupported("geometry(Polygon, 4326)") // WGS84
+
+  // Buffer configuration
+  bufferDistance   Float?                                  // meters (if buffer required)
+  bufferedGeometry Unsupported("geometry(Polygon, 4326)")? // Buffered zone
+
+  // Type-specific attributes (flexible JSONB)
+  attributes Json? // e.g., {"agency": "EPA", "permitRequired": true}
+
+  // Calculated properties
+  areaSquareMeters Float
+  areaAcres        Float
+
+  // Metadata
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  project          Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  propertyBoundary PropertyBoundary @relation(fields: [propertyBoundaryId], references: [id], onDelete: Cascade)
+  uploadedFile     UploadedFile?    @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  user             User             @relation(fields: [createdBy], references: [id])
+
+  @@index([projectId])
+  @@index([propertyBoundaryId])
+  @@index([type])
+  @@index([createdBy])
+  // Spatial indexes created via raw SQL migration (PostGIS GIST index)
+}
+
+// Story 1.5: Calculated buildable area (property - exclusions)
+model BuildableArea {
+  id                 String @id @default(uuid())
+  projectId          String @unique
+  propertyBoundaryId String @unique
+
+  // Calculated buildable area geometry (property - exclusions)
+  geometry Unsupported("geometry(MultiPolygon, 4326)") // WGS84 (may be multiple disconnected areas)
+
+  // Area calculations
+  areaSquareMeters Float
+  areaAcres        Float
+  areaHectares     Float
+
+  // Statistics
+  totalPropertyArea Float // square meters
+  excludedArea      Float // square meters
+  buildablePercent  Float // (buildable / total) * 100
+
+  // Metadata
+  calculatedAt   DateTime @default(now())
+  exclusionCount Int // Number of exclusion zones applied
+
+  // Relations
+  project          Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  propertyBoundary PropertyBoundary @relation(fields: [propertyBoundaryId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  // Spatial index created via raw SQL migration (PostGIS GIST index)
+}
