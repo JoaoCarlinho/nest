@@ -20,6 +20,7 @@ model User {
   // Relations
   uploadedFiles UploadedFile[]
   projects      Project[]
+  exclusionZones ExclusionZone[]
 
   @@index([email])
 }
@@ -40,6 +41,7 @@ model UploadedFile {
   user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   propertyBoundary  PropertyBoundary?
   contourLines      ContourLine[]
+  exclusionZones    ExclusionZone[]
 
   @@index([userId, uploadedAt])
   @@index([expiresAt]) // For cleanup jobs
@@ -61,6 +63,9 @@ model Project {
   terrainMetadata    TerrainMetadata?
   demProcessingJobs  DEMProcessingJob[]
   digitalElevationModel DigitalElevationModel?
+  slopeAnalysis      SlopeAnalysis?
+  exclusionZones     ExclusionZone[]
+  buildableArea      BuildableArea?
 
   @@index([userId])
 }
@@ -93,6 +98,9 @@ model PropertyBoundary {
   terrainMetadata TerrainMetadata?
   demProcessingJobs DEMProcessingJob[]
   digitalElevationModel DigitalElevationModel?
+  slopeAnalysis   SlopeAnalysis[]
+  exclusionZones  ExclusionZone[]
+  buildableArea   BuildableArea?
 
   @@index([projectId])
   @@index([fileId])
@@ -226,6 +234,7 @@ model DigitalElevationModel {
   project          Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
   propertyBoundary PropertyBoundary   @relation(fields: [propertyBoundaryId], references: [id], onDelete: Cascade)
   processingJobs   DEMProcessingJob[]
+  slopeAnalysis    SlopeAnalysis[]
 
   @@index([projectId])
 }
@@ -313,4 +322,51 @@ model BuildableArea {
 
   @@index([projectId])
   // Spatial index created via raw SQL migration (PostGIS GIST index)
+}
+
+// Story 2.1: Slope Analysis
+model SlopeAnalysis {
+  id                 String @id @default(uuid())
+  projectId          String @unique
+  propertyBoundaryId String
+  demId              String // Reference to DEM from Story 1.4
+
+  // Analysis parameters
+  smoothingEnabled    Boolean @default(false)
+  smoothingKernelSize Int?    // 3 or 5 (only if smoothingEnabled)
+  maxBuildableSlope   Float   @default(15.0) // percent
+
+  // Classification thresholds
+  flatThreshold     Float @default(5.0)  // 0-5%
+  moderateThreshold Float @default(15.0) // 5-15%
+  steepThreshold    Float @default(25.0) // 15-25%
+  // >25% = very steep
+
+  // Statistics
+  meanSlope          Float
+  medianSlope        Float
+  maxSlope           Float
+  flatPercent        Float // % of site 0-5%
+  moderatePercent    Float // % of site 5-15%
+  steepPercent       Float // % of site 15-25%
+  verySteepPercent   Float // % of site >25%
+  unbuildablePercent Float // % of site > maxBuildableSlope
+
+  // Output files (S3 paths)
+  slopeGeoTiffPath       String  // Raw slope percentage raster
+  classifiedGeoTiffPath  String  // Classified slope categories
+  heatmapPngPath         String  // Visualization
+  unbuildableAreasGeoJson String? // Polygons of unbuildable areas
+
+  // Metadata
+  calculatedAt     DateTime @default(now())
+  processingTimeMs Int // Performance tracking
+
+  // Relations
+  project          Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  propertyBoundary PropertyBoundary     @relation(fields: [propertyBoundaryId], references: [id], onDelete: Cascade)
+  dem              DigitalElevationModel @relation(fields: [demId], references: [id])
+
+  @@index([projectId])
+  @@index([demId])
 }
