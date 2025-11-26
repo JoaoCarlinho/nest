@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+  <Document>
+    <name>Simple Property Boundary</name>
+    <Placemark>
+      <name>Property Boundary</name>
+      <description>Simple rectangular boundary for testing</description>
+      <Polygon>
+        <outerBoundaryIs>
+          <LinearRing>
+            <coordinates>
+              -122.4194,37.7749,0
+              -122.4184,37.7749,0
+              -122.4184,37.7759,0
+              -122.4194,37.7759,0
+              -122.4194,37.7749,0
+            </coordinates>
+          </LinearRing>
+        </outerBoundaryIs>
+      </Polygon>
+    </Placemark>
+  </Document>
+</kml>

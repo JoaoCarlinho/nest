@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+  <Document>
+    <name>Unclosed Polygon</name>
+    <Placemark>
+      <name>Invalid Unclosed Boundary</name>
+      <description>Polygon where first point does not equal last point</description>
+      <Polygon>
+        <outerBoundaryIs>
+          <LinearRing>
+            <coordinates>
+              -122.4194,37.7749,0
+              -122.4184,37.7749,0
+              -122.4184,37.7759,0
+              -122.4194,37.7759,0
+            </coordinates>
+          </LinearRing>
+        </outerBoundaryIs>
+      </Polygon>
+    </Placemark>
+  </Document>
+</kml>

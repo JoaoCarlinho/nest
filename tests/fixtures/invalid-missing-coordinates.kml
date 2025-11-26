@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+  <Document>
+    <name>Invalid KML - Missing Coordinates</name>
+    <Placemark>
+      <name>Invalid Polygon</name>
+      <Polygon>
+        <outerBoundaryIs>
+          <LinearRing>
+            <!-- Missing coordinates element -->
+          </LinearRing>
+        </outerBoundaryIs>
+      </Polygon>
+    </Placemark>
+  </Document>
+</kml>

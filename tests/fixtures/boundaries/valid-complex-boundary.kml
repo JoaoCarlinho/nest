@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+  <Document>
+    <name>Complex Property Boundary</name>
+    <Placemark>
+      <name>Irregular Property</name>
+      <description>Complex irregular polygon with many vertices</description>
+      <Polygon>
+        <outerBoundaryIs>
+          <LinearRing>
+            <coordinates>
+              -105.2705,40.0150,0
+              -105.2700,40.0150,0
+              -105.2695,40.0152,0
+              -105.2692,40.0155,0
+              -105.2690,40.0158,0
+              -105.2688,40.0162,0
+              -105.2687,40.0165,0
+              -105.2686,40.0168,0
+              -105.2686,40.0172,0
+              -105.2687,40.0175,0
+              -105.2689,40.0178,0
+              -105.2692,40.0180,0
+              -105.2695,40.0182,0
+              -105.2698,40.0183,0
+              -105.2702,40.0184,0
+              -105.2706,40.0184,0
+              -105.2710,40.0183,0
+              -105.2713,40.0181,0
+              -105.2715,40.0178,0
+              -105.2716,40.0174,0
+              -105.2716,40.0170,0
+              -105.2714,40.0165,0
+              -105.2711,40.0160,0
+              -105.2708,40.0155,0
+              -105.2705,40.0150,0
+            </coordinates>
+          </LinearRing>
+        </outerBoundaryIs>
+      </Polygon>
+    </Placemark>
+  </Document>
+</kml>
