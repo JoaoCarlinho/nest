@@ -1,5 +1,58 @@
-bmad/
-docs/
 AI_Tool_Cuts_Site_Selection_Time_in_Half.m4a
 bmad
+# logs
+logs/
+
+
+# process docs
+dev_docs/
+
+# macOS files
 .DS_Store
+
+# agile agent commands
+CLAUDE.md
+.claude/
+bmad/
+
+# Ignore secrets
+tokens
+
+# Environment files
+.env
+.env.*
+*.env
+
+# Credentials and keys
+*.pem
+*.key
+*.p12
+*.pfx
+*.keystore
+credentials.json
+serviceAccount.json
+
+# Ignore iac - not creating remote state bucket yet
+infra/
+
+# Ignore build output
+dist/
+.turbo/
+deployment/
+
+# Next.js
+.next/
+out/
+
+# Ignore scripts
+scripts/
+
+# Ignore node modules
+node_modules/
+
+# Ignore lambda zip files
+apps/api/lambda-api.zip
+lambda-package.zip
+migration-runner.zip
+lambda.zip
+
