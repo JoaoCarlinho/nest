@@ -1,0 +1,43 @@
+{
+  "name": "nest",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "test": "vitest",
+    "test:e2e": "playwright test",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.937.0",
+    "@aws-sdk/client-sqs": "^3.940.0",
+    "@aws-sdk/s3-request-presigner": "^3.940.0",
+    "@prisma/client": "^6.19.0",
+    "@turf/turf": "^7.3.0",
+    "@types/geojson": "^7946.0.16",
+    "adm-zip": "^0.5.16",
+    "dxf-parser": "^1.1.2",
+    "fast-xml-parser": "^4.5.0",
+    "next": "^15.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "shapefile": "^0.6.6"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.56.1",
+    "@types/adm-zip": "^0.5.5",
+    "@types/node": "^20.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@types/shapefile": "^0.6.4",
+    "eslint": "^8.0.0",
+    "eslint-config-next": "^15.0.0",
+    "prisma": "^6.19.0",
+    "typescript": "^5.0.0",
+    "vitest": "^2.0.0"
+  }
+}
