@@ -20,6 +20,7 @@ model User {
   // Relations
   uploadedFiles UploadedFile[]
   projects      Project[]
+  elevationProfiles ElevationProfile[]
   exclusionZones ExclusionZone[]
 
   @@index([email])
@@ -65,6 +66,7 @@ model Project {
   digitalElevationModel DigitalElevationModel?
   slopeAnalysis      SlopeAnalysis?
   aspectAnalysis     AspectAnalysis?
+  elevationProfiles  ElevationProfile[]
   exclusionZones     ExclusionZone[]
   buildableArea      BuildableArea?
 
@@ -101,6 +103,7 @@ model PropertyBoundary {
   digitalElevationModel DigitalElevationModel?
   slopeAnalysis   SlopeAnalysis[]
   aspectAnalysis  AspectAnalysis[]
+  elevationProfiles ElevationProfile[]
   exclusionZones  ExclusionZone[]
   buildableArea   BuildableArea?
 
@@ -238,6 +241,7 @@ model DigitalElevationModel {
   processingJobs   DEMProcessingJob[]
   slopeAnalysis    SlopeAnalysis[]
   aspectAnalysis   AspectAnalysis[]
+  elevationProfiles ElevationProfile[]
 
   @@index([projectId])
 }
@@ -423,4 +427,62 @@ model AspectAnalysis {
   @@index([projectId])
   @@index([demId])
   @@index([slopeAnalysisId])
+}
+
+// Story 2.3: Elevation Profile and Grade Analysis
+model ElevationProfile {
+  id                 String @id @default(uuid())
+  projectId          String
+  propertyBoundaryId String
+  demId              String // Reference to DEM from Story 1.4
+  createdBy          String // User ID
+
+  // Profile identification
+  name               String  // User-provided name (e.g., "Route A", "Main Access")
+  description        String?
+
+  // Profile line geometry
+  lineGeometry       Unsupported("geometry(LineString, 4326)") // User-defined line
+  startPoint         Unsupported("geometry(Point, 4326)")      // First point
+  endPoint           Unsupported("geometry(Point, 4326)")      // Last point
+
+  // Sampling parameters
+  sampleInterval     Float @default(5.0)  // meters between sample points
+  sampleCount        Int                  // Number of sampled points
+
+  // Profile statistics
+  totalDistance      Float // meters (horizontal distance along line)
+  elevationGain      Float // meters (total climbing)
+  elevationLoss      Float // meters (total descending)
+  netElevationChange Float // meters (end - start)
+  startElevation     Float // meters
+  endElevation       Float // meters
+  minElevation       Float // meters
+  maxElevation       Float // meters
+
+  // Grade analysis
+  maxGradeThreshold     Float @default(8.0) // percent
+  maxGradeUphill        Float // percent (steepest uphill section)
+  maxGradeDownhill      Float // percent (steepest downhill section, absolute value)
+  excessiveGradeDistance Float // meters (distance with grade > threshold)
+  excessiveGradePercent  Float // percent of total distance
+
+  // Output files (S3 paths)
+  profileDataCsv  String  // CSV with distance, elevation, grade, lat, lng
+  profileChartPng String  // PNG chart visualization
+  profileDataJson String? // JSON for interactive chart (optional)
+
+  // Metadata
+  createdAt        DateTime @default(now())
+  processingTimeMs Int // Performance tracking
+
+  // Relations
+  project          Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  propertyBoundary PropertyBoundary     @relation(fields: [propertyBoundaryId], references: [id], onDelete: Cascade)
+  dem              DigitalElevationModel @relation(fields: [demId], references: [id])
+  user             User                 @relation(fields: [createdBy], references: [id])
+
+  @@index([projectId])
+  @@index([createdBy])
+  @@index([demId])
 }
